@@ -1,0 +1,30 @@
+# Grafana datasource provisioning for Prometheus
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "100ms"  # Match YSO-Exporter polling interval
+      queryTimeout: "60s"
+      httpMethod: POST
+      # Enable exemplar support if needed
+      exemplarTraceIdDestinations: []
+      # Custom query parameters
+      customQueryParameters: ""
+      # Prometheus version
+      prometheusVersion: "2.48.0"
+      prometheusType: "Prometheus"
+      # Incremental querying
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: "10m"
+      # Disable metric/label name lookup for better performance
+      disableMetricsLookup: false
+      # Caching
+      cacheLevel: "Low"
+      # Default editor mode
+      defaultEditor: "code"

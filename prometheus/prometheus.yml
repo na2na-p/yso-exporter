@@ -1,0 +1,65 @@
+# Prometheus configuration for YSO-Exporter
+global:
+  scrape_interval: 15s # Default scrape interval
+  evaluation_interval: 15s # How frequently to evaluate rules
+  scrape_timeout: 10s # Default scrape timeout
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    monitor: 'yso-exporter-monitor'
+    environment: 'development'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # YSO-Exporter metrics
+  - job_name: 'yso-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:8080']  # For Windows/Mac Docker Desktop
+        labels:
+          game: 'ys-origin'
+          version: 'jp_1.1.0.3'
+    # Override global settings for YSO-Exporter
+    scrape_interval: 100ms  # Match the game polling interval
+    scrape_timeout: 90ms
+    metrics_path: '/metrics'
+    
+    # Optional: relabel configurations
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'yso-exporter'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Grafana metrics (optional)
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+    metrics_path: '/metrics'
+
+# Optional: Remote write configuration for long-term storage
+# remote_write:
+#   - url: "http://remote-storage:9090/api/v1/write"
+
+# Optional: Remote read configuration
+# remote_read:
+#   - url: "http://remote-storage:9090/api/v1/read"
