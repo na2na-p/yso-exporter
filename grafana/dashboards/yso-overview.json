@@ -662,7 +662,8 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "short",
+          "min": 0
         },
         "overrides": [
           {
