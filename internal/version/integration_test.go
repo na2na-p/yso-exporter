@@ -1,32 +1,15 @@
 package version
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
-// TestIntegrationWithActualConfig tests the resolver with the actual jp_1.1.0.3.yaml config file
-func TestIntegrationWithActualConfig(t *testing.T) {
-	// Get the working directory and construct absolute path
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Failed to get working directory: %v", err)
-	}
-
-	// Navigate up to project root and find the config file
-	projectRoot := filepath.Join(wd, "..", "..")
-	configPath := filepath.Join(projectRoot, "configs", "versions", "jp_1.1.0.3.yaml")
-
-	// Check if the actual config file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		t.Skipf("jp_1.1.0.3.yaml config file not found at %s, skipping integration test", configPath)
-	}
-
-	t.Run("create resolver with actual config file", func(t *testing.T) {
-		resolver, err := NewConfigAddressResolver(configPath)
+// TestIntegrationWithBuiltinConfig tests the resolver with built-in configurations
+func TestIntegrationWithBuiltinConfig(t *testing.T) {
+	t.Run("create resolver with built-in jp_1.1.0.3 config", func(t *testing.T) {
+		resolver, err := NewConfigAddressResolverByVersion("jp_1.1.0.3")
 		if err != nil {
-			t.Fatalf("NewConfigAddressResolver failed with actual config: %v", err)
+			t.Fatalf("NewConfigAddressResolverByVersion failed: %v", err)
 		}
 
 		if resolver == nil {
@@ -39,111 +22,121 @@ func TestIntegrationWithActualConfig(t *testing.T) {
 			t.Errorf("Expected version name 'jp_1.1.0.3', got '%s'", versionName)
 		}
 
-		// Test process name (now YSO_WIN.exe)
+		// Test process name
 		processName := resolver.GetProcessName()
 		if processName != "YSO_WIN.exe" {
 			t.Errorf("Expected process name 'YSO_WIN.exe', got '%s'", processName)
 		}
 	})
 
-	t.Run("resolve actual addresses from config", func(t *testing.T) {
-		resolver, err := NewConfigAddressResolver(configPath)
+	t.Run("resolve actual addresses from built-in config", func(t *testing.T) {
+		resolver, err := NewConfigAddressResolverByVersion("jp_1.1.0.3")
 		if err != nil {
-			t.Fatalf("NewConfigAddressResolver failed: %v", err)
+			t.Fatalf("Failed to create resolver: %v", err)
 		}
 
-		// Test character address resolution
-		addr, err := resolver.ResolveAddress("character")
+		// Test character address
+		charAddr, err := resolver.ResolveAddress("character")
 		if err != nil {
-			t.Fatalf("ResolveAddress failed for character: %v", err)
-		}
-
-		if addr == nil {
-			t.Fatal("Expected address config to be non-nil for character")
-		}
-
-		// Base is now a string like "YSO_WIN.exe+2F8314"
-		if baseStr, ok := addr.Base.(string); ok {
-			if baseStr != "YSO_WIN.exe+2F8314" {
-				t.Errorf("Expected character base 'YSO_WIN.exe+2F8314', got '%s'", baseStr)
-			}
+			t.Errorf("Failed to resolve character address: %v", err)
 		} else {
-			t.Errorf("Expected base to be string, got type %T, value: %v", addr.Base, addr.Base)
+			if charAddr.Base != "YSO_WIN.exe+2F8314" {
+				t.Errorf("Expected character base 'YSO_WIN.exe+2F8314', got '%s'", charAddr.Base)
+			}
+			if charAddr.Type != "byte" {
+				t.Errorf("Expected character type 'byte', got '%s'", charAddr.Type)
+			}
 		}
 
-		if addr.Type != "byte" {
-			t.Errorf("Expected character type 'byte', got '%s'", addr.Type)
-		}
-
-		// Test hp address resolution
-		addr, err = resolver.ResolveAddress("hp")
+		// Test hp address
+		hpAddr, err := resolver.ResolveAddress("hp")
 		if err != nil {
-			t.Fatalf("ResolveAddress failed for hp: %v", err)
-		}
-
-		// Base is now a string like "YSO_WIN.exe+2F6ED0"
-		if baseStr, ok := addr.Base.(string); ok {
-			if baseStr != "YSO_WIN.exe+2F6ED0" {
-				t.Errorf("Expected hp base 'YSO_WIN.exe+2F6ED0', got '%s'", baseStr)
-			}
+			t.Errorf("Failed to resolve hp address: %v", err)
 		} else {
-			t.Errorf("Expected base to be string, got type %T, value: %v", addr.Base, addr.Base)
+			if hpAddr.Base != "YSO_WIN.exe+2F6ED0" {
+				t.Errorf("Expected hp base 'YSO_WIN.exe+2F6ED0', got '%s'", hpAddr.Base)
+			}
+			if hpAddr.Type != "float32" {
+				t.Errorf("Expected hp type 'float32', got '%s'", hpAddr.Type)
+			}
 		}
 
-		// Test player coordinates (should have base addresses)
-		addr, err = resolver.ResolveAddress("player_x")
+		// Test mp address
+		mpAddr, err := resolver.ResolveAddress("mp")
 		if err != nil {
-			t.Fatalf("ResolveAddress failed for player_x: %v", err)
-		}
-
-		// Base could be either numeric or string format
-		if baseInt, ok := addr.Base.(int); ok {
-			if baseInt != 0x00520200 {
-				t.Errorf("Expected player_x base 0x00520200, got 0x%x", baseInt)
-			}
-		} else if baseUint64, ok := addr.Base.(uint64); ok {
-			if baseUint64 != 0x00520200 {
-				t.Errorf("Expected player_x base 0x00520200, got 0x%x", baseUint64)
-			}
-		} else if baseFloat, ok := addr.Base.(float64); ok {
-			if int(baseFloat) != 0x00520200 {
-				t.Errorf("Expected player_x base 0x00520200, got 0x%x", int(baseFloat))
-			}
+			t.Errorf("Failed to resolve mp address: %v", err)
 		} else {
-			// Allow string format too
-			t.Logf("player_x base is in string format: %v", addr.Base)
+			if mpAddr.Base != "YSO_WIN.exe+2F6ED8" {
+				t.Errorf("Expected mp base 'YSO_WIN.exe+2F6ED8', got '%s'", mpAddr.Base)
+			}
+			if mpAddr.Type != "float32" {
+				t.Errorf("Expected mp type 'float32', got '%s'", mpAddr.Type)
+			}
 		}
 
-		if addr.Type != "float32" {
-			t.Errorf("Expected player_x type 'float32', got '%s'", addr.Type)
+		// Test level address
+		levelAddr, err := resolver.ResolveAddress("level")
+		if err != nil {
+			t.Errorf("Failed to resolve level address: %v", err)
+		} else {
+			if levelAddr.Base != "YSO_WIN.exe+2F6F00" {
+				t.Errorf("Expected level base 'YSO_WIN.exe+2F6F00', got '%s'", levelAddr.Base)
+			}
+			if levelAddr.Type != "int32" {
+				t.Errorf("Expected level type 'int32', got '%s'", levelAddr.Type)
+			}
+		}
+
+		// Test experience address
+		expAddr, err := resolver.ResolveAddress("experience")
+		if err != nil {
+			t.Errorf("Failed to resolve experience address: %v", err)
+		} else {
+			if expAddr.Base != "YSO_WIN.exe+2F6EE8" {
+				t.Errorf("Expected experience base 'YSO_WIN.exe+2F6EE8', got '%s'", expAddr.Base)
+			}
+			if expAddr.Type != "float32" {
+				t.Errorf("Expected experience type 'float32', got '%s'", expAddr.Type)
+			}
+		}
+
+		// Test non-existent address
+		_, err = resolver.ResolveAddress("non_existent_metric")
+		if err == nil {
+			t.Error("Expected error when resolving non-existent metric")
 		}
 	})
 
-	t.Run("test NewConfigAddressResolverByVersion with cwd", func(t *testing.T) {
-		// Change to project root temporarily
-		originalWd, _ := os.Getwd()
-		defer os.Chdir(originalWd)
-
-		projectRoot := filepath.Join(originalWd, "..", "..")
-		if err := os.Chdir(projectRoot); err != nil {
-			t.Fatalf("Failed to change directory to project root: %v", err)
-		}
-
-		resolver, err := NewConfigAddressResolverByVersion("jp_1.1.0.3")
+	t.Run("create resolver with built-in jp_1.0.0.4 config", func(t *testing.T) {
+		resolver, err := NewConfigAddressResolverByVersion("jp_1.0.0.4")
 		if err != nil {
 			t.Fatalf("NewConfigAddressResolverByVersion failed: %v", err)
 		}
 
-		// Verify basic functionality
-		versionName := resolver.GetVersionName()
-		if versionName != "jp_1.1.0.3" {
-			t.Errorf("Expected version name 'jp_1.1.0.3', got '%s'", versionName)
+		if resolver == nil {
+			t.Fatal("Expected resolver to be non-nil")
 		}
 
-		// Verify address resolution works
-		_, err = resolver.ResolveAddress("character")
+		// Test version name
+		versionName := resolver.GetVersionName()
+		if versionName != "jp_1.0.0.4" {
+			t.Errorf("Expected version name 'jp_1.0.0.4', got '%s'", versionName)
+		}
+
+		// Test process name
+		processName := resolver.GetProcessName()
+		if processName != "YSO_WIN.exe" {
+			t.Errorf("Expected process name 'YSO_WIN.exe', got '%s'", processName)
+		}
+
+		// Test character address (different from jp_1.1.0.3)
+		charAddr, err := resolver.ResolveAddress("character")
 		if err != nil {
-			t.Fatalf("ResolveAddress failed for character: %v", err)
+			t.Errorf("Failed to resolve character address: %v", err)
+		} else {
+			if charAddr.Base != "YSO_WIN.exe+2E241C" {
+				t.Errorf("Expected character base 'YSO_WIN.exe+2E241C', got '%s'", charAddr.Base)
+			}
 		}
 	})
 }

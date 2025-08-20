@@ -46,15 +46,20 @@ func (pe *PrometheusExporter) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	// メトリクスを収集（Pollerが動作していない場合のために手動収集）
 	// 注: 本来はPollerが定期的に収集しているはずだが、念のため
-	// コメントアウト: Pollerが動作中の場合、重複収集の原因になる
-	// if err := pe.collector.Collect(); err != nil {
-	// 	// エラーログを出力（デバッグ用）
-	// 	fmt.Printf("Collect error: %v\n", err)
-	// 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	fmt.Fprintf(w, "Error collecting metrics: %v", err)
-	// 	return
-	// }
+	if err := pe.collector.Collect(); err != nil {
+		// プロセスが見つからない場合は静かに空のメトリクスを返す
+		// "module YSO_WIN.exe not found"のエラーは抑制
+		if strings.Contains(err.Error(), "not found in process") || strings.Contains(err.Error(), "module") {
+			// プロセスが見つからない場合は空のメトリクスを返す
+			pe.writePrometheusFormat(w, []collector.Metric{})
+			return
+		}
+		// その他のエラーの場合はエラーを返す
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Error collecting metrics: %v", err)
+		return
+	}
 
 	// メトリクスを取得
 	metrics := pe.collector.GetMetrics()

@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/na2na/yso-exporter/internal/memory"
 	"github.com/na2na/yso-exporter/internal/version"
@@ -41,7 +42,10 @@ func (bc *BasicCollector) Collect() error {
 		"str_boost", "def_boost", "mp_boost", "hit_count",
 		"str_boost_visual", "def_boost_visual", "mp_boost_visual", "hit_count_visual"}
 
-	for _, metricName := range metricNames {
+	// プロセス接続チェックのために最初のメトリクスで試す
+	hasProcessError := false
+
+	for i, metricName := range metricNames {
 		// アドレス設定を解決
 		addressConfig, err := bc.resolver.ResolveAddress(metricName)
 		if err != nil {
@@ -53,7 +57,16 @@ func (bc *BasicCollector) Collect() error {
 		// ベースアドレスを解析
 		baseAddress, err := bc.reader.ParseAndResolveAddress(addressConfig.Base)
 		if err != nil {
-			return fmt.Errorf("failed to parse base address for %s: %w", metricName, err)
+			// プロセスが見つからないエラーの場合
+			if i == 0 && (strings.Contains(err.Error(), "not found in process") || strings.Contains(err.Error(), "module")) {
+				// 最初のメトリクスでプロセスエラーなら、全体をスキップ
+				return fmt.Errorf("failed to parse base address for %s: %w", metricName, err)
+			}
+			// その他のメトリクスでのエラーは個別に処理
+			if !hasProcessError {
+				return fmt.Errorf("failed to parse base address for %s: %w", metricName, err)
+			}
+			continue
 		}
 
 		// ポインタチェインを解決してアドレスを取得

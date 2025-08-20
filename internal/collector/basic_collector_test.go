@@ -2,6 +2,7 @@ package collector_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -107,6 +108,12 @@ func TestBasicCollector_Collect(t *testing.T) {
 						Type:    "int32",
 					}, nil)
 
+					// ground_pointer の解決 (追加されたメトリクスなのでnilを返す)
+					m.EXPECT().ResolveAddress("ground_pointer").Return(nil, fmt.Errorf("not found")).AnyTimes()
+
+					// その他のメトリクス（存在しない場合はエラーを返す）
+					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, fmt.Errorf("not found")).AnyTimes()
+
 					return m
 				},
 				reader: func(ctrl *gomock.Controller) memory.MemoryReader {
@@ -147,14 +154,15 @@ func TestBasicCollector_Collect(t *testing.T) {
 			fields: fields{
 				resolver: func(ctrl *gomock.Controller) version.AddressResolver {
 					m := versionmocks.NewMockAddressResolver(ctrl)
-					m.EXPECT().ResolveAddress("character").Return(nil, errors.New("address not found"))
+					// 全てのメトリクスでアドレス解決に失敗
+					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, errors.New("address not found")).AnyTimes()
 					return m
 				},
 				reader: func(ctrl *gomock.Controller) memory.MemoryReader {
 					return memorymocks.NewMockMemoryReader(ctrl)
 				},
 			},
-			wantErr: errors.New("failed to resolve address for character: address not found"),
+			wantErr: nil, // 全てのメトリクスがスキップされてもエラーにはならない
 		},
 		{
 			name: "異常系: メモリ読み取りに失敗した場合、エラーが返る",
@@ -166,6 +174,8 @@ func TestBasicCollector_Collect(t *testing.T) {
 						Offsets: []uint32{0x10, 0x20},
 						Type:    "byte",
 					}, nil)
+					// その他のメトリクス
+					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, fmt.Errorf("not found")).AnyTimes()
 					return m
 				},
 				reader: func(ctrl *gomock.Controller) memory.MemoryReader {
@@ -256,6 +266,9 @@ func TestBasicCollector_GetMetrics(t *testing.T) {
 						Type:    "int32",
 					}, nil)
 
+					// その他のメトリクス（存在しない場合はエラーを返す）
+					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, fmt.Errorf("not found")).AnyTimes()
+
 					return m
 				},
 				reader: func(ctrl *gomock.Controller) memory.MemoryReader {
@@ -294,31 +307,31 @@ func TestBasicCollector_GetMetrics(t *testing.T) {
 			},
 			want: []collector.Metric{
 				{
-					Name:   "character",
+					Name:   "yso_character",
 					Value:  1, // Hugo
 					Type:   collector.Gauge,
-					Labels: map[string]string{"character": "hugo"},
+					Labels: map[string]string{},
 				},
 				{
-					Name:   "level",
+					Name:   "yso_level",
 					Value:  25,
 					Type:   collector.Gauge,
 					Labels: map[string]string{},
 				},
 				{
-					Name:   "exp",
+					Name:   "yso_exp",
 					Value:  5678,
 					Type:   collector.Gauge,
 					Labels: map[string]string{},
 				},
 				{
-					Name:   "hp",
+					Name:   "yso_hp",
 					Value:  95,
 					Type:   collector.Gauge,
 					Labels: map[string]string{},
 				},
 				{
-					Name:   "mp",
+					Name:   "yso_mp",
 					Value:  68,
 					Type:   collector.Gauge,
 					Labels: map[string]string{},

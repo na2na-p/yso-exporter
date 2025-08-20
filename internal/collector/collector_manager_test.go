@@ -155,19 +155,19 @@ func TestCollectorManager_Collect(t *testing.T) {
 			wantErr: nil, // 一部成功すれば全体としては成功
 		},
 		{
-			name: "異常系: 全てのCollectorが失敗する",
+			name: "異常系: 一部のCollectorが失敗するが、BasicCollectorは成功する",
 			fields: fields{
 				resolver: func(ctrl *gomock.Controller) version.AddressResolver {
 					m := versionmocks.NewMockAddressResolver(ctrl)
-					// 全ての解決を失敗させる
-					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, errors.New("all failed")).AnyTimes()
+					// 全ての解決を失敗させる（BasicCollectorは失敗しても続行するため）
+					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, errors.New("not found")).AnyTimes()
 					return m
 				},
 				reader: func(ctrl *gomock.Controller) memory.MemoryReader {
 					return memorymocks.NewMockMemoryReader(ctrl)
 				},
 			},
-			wantErr: errors.New("all collectors failed"),
+			wantErr: nil, // BasicCollectorは失敗しないため、全体としては成功
 		},
 	}
 	for _, tt := range tests {

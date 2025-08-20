@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -79,28 +78,6 @@ func (f *Flags) Validate() error {
 	return nil
 }
 
-func GetAvailableVersions() []string {
-	// configs/versionsディレクトリから利用可能なバージョンを動的に検出
-	versionsDir := filepath.Join("configs", "versions")
-
-	entries, err := os.ReadDir(versionsDir)
-	if err != nil {
-		// ディレクトリが存在しない場合は空のリストを返す
-		return []string{}
-	}
-
-	var versions []string
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yaml") {
-			// .yaml拡張子を除いたファイル名をバージョン名として使用
-			version := strings.TrimSuffix(entry.Name(), ".yaml")
-			versions = append(versions, version)
-		}
-	}
-
-	return versions
-}
-
 func PrintAvailableVersions() {
 	fmt.Println("Available game versions:")
 	for _, v := range GetAvailableVersions() {
@@ -111,10 +88,10 @@ func PrintAvailableVersions() {
 func SelectVersionInteractive() string {
 	versions := GetAvailableVersions()
 
-	// バージョンが見つからない場合のエラー処理
+	// バージョンが見つからない場合（組み込みも含めて）のエラー処理
 	if len(versions) == 0 {
-		fmt.Println("\nError: No version configuration files found in configs/versions/")
-		fmt.Println("Please ensure at least one .yaml configuration file exists in the configs/versions/ directory.")
+		fmt.Println("\nError: No version configurations available.")
+		fmt.Println("This should not happen. Please check your installation.")
 		os.Exit(1)
 	}
 

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -23,7 +22,6 @@ import (
 // カプセル化の原則に従い、アプリケーション全体を管理する単一の責任を持つ
 type Application struct {
 	flags          *config.Flags
-	versionManager *version.VersionManager
 	memoryReader   memory.MemoryReader
 	collector      collector.Collector
 	poller         *collector.PollerImpl
@@ -104,16 +102,8 @@ func NewApplication(flags *config.Flags) (*Application, error) {
 		cancel: cancel,
 	}
 
-	// VersionManagerの初期化
-	configDir := filepath.Join("configs", "versions")
-	versionManager, err := version.NewVersionManager(configDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create version manager: %w", err)
-	}
-	app.versionManager = versionManager
-
-	// AddressResolverの作成
-	addressResolver, err := versionManager.CreateAddressResolver(flags.Version)
+	// AddressResolverの作成（組み込み設定から直接作成）
+	addressResolver, err := version.NewConfigAddressResolverByVersion(flags.Version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create address resolver: %w", err)
 	}
@@ -186,7 +176,7 @@ func (app *Application) Start() error {
 	log.Printf("  Polling Interval: %v", app.flags.Interval)
 
 	// AddressResolverからプロセス名を取得
-	resolver, err := app.versionManager.CreateAddressResolver(app.flags.Version)
+	resolver, err := version.NewConfigAddressResolverByVersion(app.flags.Version)
 	if err != nil {
 		return fmt.Errorf("failed to get address resolver: %w", err)
 	}
