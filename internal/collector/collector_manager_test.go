@@ -109,7 +109,7 @@ func TestCollectorManager_Collect(t *testing.T) {
 			fields: fields{
 				resolver: func(ctrl *gomock.Controller) version.AddressResolver {
 					m := versionmocks.NewMockAddressResolver(ctrl)
-					
+
 					// BasicCollector用の設定（成功させる）
 					m.EXPECT().ResolveAddress("character").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x10}, Type: "byte",
@@ -117,7 +117,7 @@ func TestCollectorManager_Collect(t *testing.T) {
 					m.EXPECT().ResolveAddress("level").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x14}, Type: "int32",
 					}, nil)
-					m.EXPECT().ResolveAddress("exp").Return(&config.AddressConfig{
+					m.EXPECT().ResolveAddress("experience").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x18}, Type: "int32",
 					}, nil)
 					m.EXPECT().ResolveAddress("hp").Return(&config.AddressConfig{
@@ -126,29 +126,29 @@ func TestCollectorManager_Collect(t *testing.T) {
 					m.EXPECT().ResolveAddress("mp").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x20}, Type: "int32",
 					}, nil)
-					
+
 					// PositionCollector用の設定（失敗させる）
 					m.EXPECT().ResolveAddress("position_x").Return(nil, errors.New("position not found"))
-					
+
 					// 他のCollectorも失敗させる
 					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, errors.New("not found")).AnyTimes()
-					
+
 					return m
 				},
 				reader: func(ctrl *gomock.Controller) memory.MemoryReader {
 					m := memorymocks.NewMockMemoryReader(ctrl)
-					
+
 					// BasicCollector用のParseAndResolveAddress（成功）
 					m.EXPECT().ParseAndResolveAddress(gomock.Any()).Return(uintptr(0x400000), nil).Times(5)
-					
+
 					// BasicCollector用のメモリ読み取り（成功）
 					m.EXPECT().ResolvePointerChain(gomock.Any(), gomock.Any()).Return(uintptr(0x500000), nil).Times(5)
 					m.EXPECT().ReadByte(gomock.Any()).Return(byte(0), nil)      // character
-					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(10), nil)  // level
+					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(10), nil)   // level
 					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(1000), nil) // exp
-					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(100), nil) // hp
-					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(50), nil)  // mp
-					
+					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(100), nil)  // hp
+					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(50), nil)   // mp
+
 					return m
 				},
 			},
@@ -214,7 +214,7 @@ func TestCollectorManager_GetMetrics(t *testing.T) {
 			fields: fields{
 				resolver: func(ctrl *gomock.Controller) version.AddressResolver {
 					m := versionmocks.NewMockAddressResolver(ctrl)
-					
+
 					// BasicCollector用の最低限の設定
 					m.EXPECT().ResolveAddress("character").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x10}, Type: "byte",
@@ -222,7 +222,7 @@ func TestCollectorManager_GetMetrics(t *testing.T) {
 					m.EXPECT().ResolveAddress("level").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x14}, Type: "int32",
 					}, nil)
-					m.EXPECT().ResolveAddress("exp").Return(&config.AddressConfig{
+					m.EXPECT().ResolveAddress("experience").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x18}, Type: "int32",
 					}, nil)
 					m.EXPECT().ResolveAddress("hp").Return(&config.AddressConfig{
@@ -231,23 +231,23 @@ func TestCollectorManager_GetMetrics(t *testing.T) {
 					m.EXPECT().ResolveAddress("mp").Return(&config.AddressConfig{
 						Base: 0x400000, Offsets: []uint32{0x20}, Type: "int32",
 					}, nil)
-					
+
 					// 他のCollectorは失敗させる
 					m.EXPECT().ResolveAddress(gomock.Any()).Return(nil, errors.New("not found")).AnyTimes()
-					
+
 					return m
 				},
 				reader: func(ctrl *gomock.Controller) memory.MemoryReader {
 					m := memorymocks.NewMockMemoryReader(ctrl)
-					
+
 					// BasicCollector用のParseAndResolveAddress
 					m.EXPECT().ParseAndResolveAddress(gomock.Any()).Return(uintptr(0x400000), nil).Times(5)
-					
+
 					// BasicCollector用のメモリ読み取り
 					m.EXPECT().ResolvePointerChain(gomock.Any(), gomock.Any()).Return(uintptr(0x500000), nil).Times(5)
 					m.EXPECT().ReadByte(gomock.Any()).Return(byte(0), nil)
 					m.EXPECT().ReadInt32(gomock.Any()).Return(int32(10), nil).Times(4)
-					
+
 					return m
 				},
 			},
@@ -262,7 +262,7 @@ func TestCollectorManager_GetMetrics(t *testing.T) {
 			reader := tt.fields.reader(ctrl)
 
 			cm := collector.NewCollectorManager(resolver, reader)
-			
+
 			// まずCollectを実行
 			err := cm.Collect()
 			if err != nil {
@@ -270,7 +270,7 @@ func TestCollectorManager_GetMetrics(t *testing.T) {
 			}
 
 			got := cm.GetMetrics()
-			
+
 			// 最低限のメトリクス数を確認
 			if len(got) < tt.want {
 				t.Errorf("GetMetrics() returned %d metrics, want at least %d", len(got), tt.want)

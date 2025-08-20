@@ -66,6 +66,11 @@ func main() {
 		os.Exit(0)
 	}
 
+	// バージョンが指定されていない場合、インタラクティブに選択
+	if flags.Version == "" && !flags.ListVersions {
+		flags.Version = config.SelectVersionInteractive()
+	}
+
 	if err := flags.Validate(); err != nil {
 		log.Fatalf("Invalid arguments: %v", err)
 	}

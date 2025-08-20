@@ -121,15 +121,3 @@ addresses:
     offsets: [0x20, 0x98]
     type: float32
     description: "Velg/Pict boss HP"
-  
-  enemy1_hp:
-    base: "YSO_WIN.exe+0x25B3CC"
-    offsets: [0x4, 0x98]
-    type: float32
-    description: "Enemy 1 HP"
-  
-  enemy2_hp:
-    base: "YSO_WIN.exe+0x25B3CC"
-    offsets: [0x8, 0x98]
-    type: float32
-    description: "Enemy 2 HP"

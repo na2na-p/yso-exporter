@@ -36,8 +36,8 @@ func (bc *BasicCollector) Collect() error {
 
 	// 収集する基本メトリクスの定義
 	// 注: コンフィグファイルのキー名と一致させる必要がある
-	metricNames := []string{"character", "level", "experience", "hp", "mp", "ground_pointer", "boost_gauge", 
-		"current_equip_skill", "floor_boss_hp_gauge", "boss_hp_some", "velg_pict_hp", "enemy1_hp", "enemy2_hp",
+	metricNames := []string{"character", "level", "experience", "hp", "mp", "ground_pointer", "boost_gauge",
+		"current_equip_skill", "floor_boss_hp_gauge", "boss_hp_some", "velg_pict_hp",
 		"str_boost", "def_boost", "mp_boost", "hit_count",
 		"str_boost_visual", "def_boost_visual", "mp_boost_visual", "hit_count_visual"}
 
@@ -63,7 +63,7 @@ func (bc *BasicCollector) Collect() error {
 			for i, offset := range addressConfig.Offsets {
 				offsets[i] = uintptr(offset)
 			}
-			
+
 			finalAddress, err = bc.reader.ResolvePointerChain(baseAddress, offsets)
 			if err != nil {
 				return fmt.Errorf("failed to resolve pointer chain for %s: %w", metricName, err)
@@ -74,12 +74,11 @@ func (bc *BasicCollector) Collect() error {
 		metric, err := bc.readMetric(metricName, finalAddress, addressConfig.Type)
 		if err != nil {
 			// 読み取りエラーの場合は0で出力（ボスHPなど、ボスがいない時は読めない）
-			if metricName == "velg_pict_hp" || metricName == "boss_hp_some" || 
-			   metricName == "enemy1_hp" || metricName == "enemy2_hp" ||
-			   metricName == "str_boost" || metricName == "def_boost" || 
-			   metricName == "mp_boost" || metricName == "hit_count" ||
-			   metricName == "str_boost_visual" || metricName == "def_boost_visual" ||
-			   metricName == "mp_boost_visual" || metricName == "hit_count_visual" {
+			if metricName == "velg_pict_hp" || metricName == "boss_hp_some" ||
+				metricName == "str_boost" || metricName == "def_boost" ||
+				metricName == "mp_boost" || metricName == "hit_count" ||
+				metricName == "str_boost_visual" || metricName == "def_boost_visual" ||
+				metricName == "mp_boost_visual" || metricName == "hit_count_visual" {
 				// ボス系・ブースト系メトリクスは0で出力
 				metric = Metric{
 					Name:   bc.mapMetricName(metricName),
@@ -122,7 +121,7 @@ func (bc *BasicCollector) readMetric(name string, address uintptr, dataType stri
 		// 	characterName := bc.getCharacterName(byteVal)
 		// 	labels["character"] = characterName
 		// }
-		
+
 		// 装備スキルの場合はラベルを追加しない（値だけで判別）
 		// if name == "current_equip_skill" {
 		// 	skillName := bc.getSkillName(byteVal)
@@ -149,7 +148,7 @@ func (bc *BasicCollector) readMetric(name string, address uintptr, dataType stri
 
 	// メトリクス名をPrometheusフレンドリーな名前にマッピング
 	prometheusName := bc.mapMetricName(name)
-	
+
 	return Metric{
 		Name:   prometheusName,
 		Value:  value,
@@ -181,10 +180,6 @@ func (bc *BasicCollector) mapMetricName(name string) string {
 		return "yso_boss_hp"
 	case "velg_pict_hp":
 		return "yso_boss_hp_velg_pict"
-	case "enemy1_hp":
-		return "yso_enemy1_hp"
-	case "enemy2_hp":
-		return "yso_enemy2_hp"
 	case "str_boost":
 		return "yso_str_boost"
 	case "def_boost":

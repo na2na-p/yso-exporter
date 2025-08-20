@@ -86,8 +86,8 @@ func TestBasicCollector_Collect(t *testing.T) {
 						Type:    "int32",
 					}, nil)
 
-					// exp の解決
-					m.EXPECT().ResolveAddress("exp").Return(&config.AddressConfig{
+					// experience の解決
+					m.EXPECT().ResolveAddress("experience").Return(&config.AddressConfig{
 						Base:    0x3000,
 						Offsets: []uint32{0x40},
 						Type:    "int32",
@@ -235,8 +235,8 @@ func TestBasicCollector_GetMetrics(t *testing.T) {
 						Type:    "int32",
 					}, nil)
 
-					// exp の解決
-					m.EXPECT().ResolveAddress("exp").Return(&config.AddressConfig{
+					// experience の解決
+					m.EXPECT().ResolveAddress("experience").Return(&config.AddressConfig{
 						Base:    0x3000,
 						Offsets: []uint32{0x40},
 						Type:    "int32",
