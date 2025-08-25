@@ -12,6 +12,7 @@ import (
 
 	"github.com/na2na/yso-exporter/internal/collector"
 	"github.com/na2na/yso-exporter/internal/config"
+	"github.com/na2na/yso-exporter/internal/debug"
 	"github.com/na2na/yso-exporter/internal/exporter"
 	"github.com/na2na/yso-exporter/internal/memory"
 	"github.com/na2na/yso-exporter/internal/process"
@@ -36,6 +37,13 @@ type Application struct {
 type ProcessEventHandler struct {
 	memoryReader memory.MemoryReader
 	processName  string
+	callback     ProcessStatusCallback
+}
+
+// ProcessStatusCallback is called when process status changes
+type ProcessStatusCallback interface {
+	OnProcessConnected(processName string)
+	OnProcessLost(processName string)
 }
 
 func (peh *ProcessEventHandler) OnProcessFound(processName string) error {
@@ -45,6 +53,9 @@ func (peh *ProcessEventHandler) OnProcessFound(processName string) error {
 		return err
 	}
 	log.Printf("Successfully connected to process: %s", processName)
+	if peh.callback != nil {
+		peh.callback.OnProcessConnected(processName)
+	}
 	return nil
 }
 
@@ -53,41 +64,52 @@ func (peh *ProcessEventHandler) OnProcessLost(processName string) error {
 	if err := peh.memoryReader.Close(); err != nil {
 		log.Printf("Failed to close memory reader: %v", err)
 	}
+	if peh.callback != nil {
+		peh.callback.OnProcessLost(processName)
+	}
 	return nil
 }
 
 func main() {
 	flags := config.ParseFlags()
 
+	// Initialize debug logging
+	debug.Init(flags.Debug)
+	defer debug.Close()
+	
+	debug.Log("Starting YSO Exporter with flags: %+v", flags)
+
+	if flags.GUI {
+		debug.Log("Launching GUI mode")
+		runGUI()
+		return
+	}
+
 	if flags.ListVersions {
-		config.PrintAvailableVersions()
-		os.Exit(0)
+		listAvailableVersions()
+		return
 	}
 
-	// バージョンが指定されていない場合、インタラクティブに選択
-	if flags.Version == "" && !flags.ListVersions {
-		flags.Version = config.SelectVersionInteractive()
+	selectedVersion := flags.Version
+	if selectedVersion == "" {
+		selectedVersion = selectVersionInteractively()
+		if selectedVersion == "" {
+			return
+		}
+		flags.Version = selectedVersion
 	}
 
-	if err := flags.Validate(); err != nil {
-		log.Fatalf("Invalid arguments: %v", err)
-	}
-
-	// アプリケーション初期化
 	app, err := NewApplication(flags)
 	if err != nil {
-		log.Fatalf("Failed to initialize application: %v", err)
+		log.Fatalf("Failed to create application: %v", err)
 	}
 	defer app.Cleanup()
 
-	// アプリケーション開始
 	if err := app.Start(); err != nil {
 		log.Fatalf("Failed to start application: %v", err)
 	}
 
-	// グレースフルシャットダウンの待機
 	app.WaitForShutdown()
-	log.Println("Application shutdown completed")
 }
 
 // NewApplication creates and initializes a new Application instance
@@ -126,6 +148,60 @@ func NewApplication(flags *config.Flags) (*Application, error) {
 	processEventHandler := &ProcessEventHandler{
 		memoryReader: memoryReader,
 		processName:  addressResolver.GetProcessName(),
+	}
+
+	// ProcessMonitorの初期化
+	monitorConfig := &process.MonitorConfig{
+		MonitorInterval: 1 * time.Second,
+		EventHandler:    processEventHandler,
+	}
+	app.processMonitor = process.NewProcessMonitor(monitorConfig, processFinder)
+
+	// HTTPサーバーの設定
+	if err := app.setupHTTPServer(); err != nil {
+		return nil, fmt.Errorf("failed to setup HTTP server: %w", err)
+	}
+
+	return app, nil
+}
+
+// NewApplicationWithCallback creates and initializes a new Application with process status callback
+// 関心の分離の原則に従い、GUI用のコールバック付きアプリケーション生成
+func NewApplicationWithCallback(flags *config.Flags, callback ProcessStatusCallback) (*Application, error) {
+	// Context設定
+	ctx, cancel := context.WithCancel(context.Background())
+
+	app := &Application{
+		flags:  flags,
+		ctx:    ctx,
+		cancel: cancel,
+	}
+
+	// AddressResolverの作成（組み込み設定から直接作成）
+	addressResolver, err := version.NewConfigAddressResolverByVersion(flags.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create address resolver: %w", err)
+	}
+
+	// ProcessFinderの初期化
+	processFinder := process.NewWindowsProcessFinder()
+
+	// MemoryReaderの初期化
+	memoryReader := memory.NewWindowsMemoryReader(processFinder)
+	app.memoryReader = memoryReader
+
+	// Collectorの初期化
+	basicCollector := collector.NewBasicCollector(addressResolver, memoryReader)
+	app.collector = basicCollector
+
+	// Pollerの初期化
+	app.poller = collector.NewPoller(basicCollector)
+
+	// ProcessEventHandlerの作成（コールバック付き）
+	processEventHandler := &ProcessEventHandler{
+		memoryReader: memoryReader,
+		processName:  addressResolver.GetProcessName(),
+		callback:     callback,
 	}
 
 	// ProcessMonitorの初期化

@@ -185,3 +185,7 @@ CLAUDE.md
 .serena
 .cursor
 .idea
+
+# Windows resource files
+*.syso
+*.syso.manifest

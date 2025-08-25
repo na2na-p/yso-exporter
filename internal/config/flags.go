@@ -15,6 +15,8 @@ type Flags struct {
 	Port         int
 	Interval     time.Duration
 	ListVersions bool
+	GUI          bool
+	Debug        bool
 	Help         bool
 }
 
@@ -25,6 +27,8 @@ func ParseFlags() *Flags {
 	flag.IntVar(&flags.Port, "port", 8080, "HTTP server port for metrics endpoint")
 	flag.DurationVar(&flags.Interval, "interval", 200*time.Millisecond, "Polling interval for memory reads")
 	flag.BoolVar(&flags.ListVersions, "list-versions", false, "List all available game versions")
+	flag.BoolVar(&flags.GUI, "gui", true, "Launch in GUI mode (default: true)")
+	flag.BoolVar(&flags.Debug, "debug", false, "Enable debug logging")
 	flag.BoolVar(&flags.Help, "help", false, "Show help message")
 
 	flag.Usage = func() {
@@ -33,9 +37,11 @@ func ParseFlags() *Flags {
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nExamples:\n")
-		fmt.Fprintf(os.Stderr, "  %s --version jp_1.1.0.3 --port 8080\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s                           # Launch GUI (default)\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s --gui=false --version jp_1.1.0.3 --port 8080\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s --list-versions\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "  %s --interval 50ms\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s --gui=false --interval 50ms\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  %s --debug                    # Enable debug logging\n", os.Args[0])
 	}
 
 	flag.Parse()
