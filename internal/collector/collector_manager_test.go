@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"go.uber.org/mock/gomock"
 
 	"github.com/na2na/yso-exporter/internal/collector"
@@ -184,11 +185,8 @@ func TestCollectorManager_Collect(t *testing.T) {
 				if err == nil {
 					t.Fatalf("Collect() error = nil, wantErr %v", tt.wantErr)
 				}
-				// エラーメッセージの部分一致を確認
-				if tt.wantErr.Error() == "all collectors failed" {
-					if err.Error()[:21] != "all collectors failed" {
-						t.Errorf("Collect() error does not start with 'all collectors failed', got: %v", err)
-					}
+				if diff := cmp.Diff(tt.wantErr.Error(), err.Error()); diff != "" {
+					t.Errorf("Collect() error mismatch (-want +got):\n%s", diff)
 				}
 			} else {
 				if err != nil {

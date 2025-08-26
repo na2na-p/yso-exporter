@@ -17,18 +17,18 @@ import (
 )
 
 func TestNewBasicCollector(t *testing.T) {
-	type args struct {
+	type fields struct {
 		resolver func(ctrl *gomock.Controller) version.AddressResolver
 		reader   func(ctrl *gomock.Controller) memory.MemoryReader
 	}
 	tests := []struct {
-		name string
-		args args
-		want func(*collector.BasicCollector) bool // 結果の検証関数
+		name   string
+		fields fields
+		want   func(*collector.BasicCollector) bool // 結果の検証関数
 	}{
 		{
 			name: "正常系: 正しくBasicCollectorが作成される",
-			args: args{
+			fields: fields{
 				resolver: func(ctrl *gomock.Controller) version.AddressResolver {
 					return versionmocks.NewMockAddressResolver(ctrl)
 				},
@@ -45,8 +45,8 @@ func TestNewBasicCollector(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
-			resolver := tt.args.resolver(ctrl)
-			reader := tt.args.reader(ctrl)
+			resolver := tt.fields.resolver(ctrl)
+			reader := tt.fields.reader(ctrl)
 
 			got := collector.NewBasicCollector(resolver, reader)
 

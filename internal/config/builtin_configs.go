@@ -23,7 +23,7 @@ var BuiltinVersionConfigs = map[string]*VersionConfig{
 				Description: "Current character ID",
 			},
 			"hp": {
-				Base:        "0x6F6ED0",
+				Base:        "YSO_WIN.exe+2F6ED0",
 				Offsets:     []uint32{},
 				Type:        "float32",
 				Description: "Current HP",

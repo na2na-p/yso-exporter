@@ -1,15 +1,16 @@
-package version
+package version_test
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/na2na/yso-exporter/internal/config"
+	"github.com/na2na/yso-exporter/internal/version"
 )
 
 func TestNewConfigAddressResolverByVersion(t *testing.T) {
 	t.Run("successful creation with valid version", func(t *testing.T) {
-		resolver, err := NewConfigAddressResolverByVersion("jp_1.1.0.3")
+		resolver, err := version.NewConfigAddressResolverByVersion("jp_1.1.0.3")
 		if err != nil {
 			t.Fatalf("NewConfigAddressResolverByVersion failed: %v", err)
 		}
@@ -30,14 +31,14 @@ func TestNewConfigAddressResolverByVersion(t *testing.T) {
 	})
 
 	t.Run("creation fails with invalid version", func(t *testing.T) {
-		_, err := NewConfigAddressResolverByVersion("invalid_version")
+		_, err := version.NewConfigAddressResolverByVersion("invalid_version")
 		if err == nil {
 			t.Error("Expected error for invalid version")
 		}
 	})
 
 	t.Run("creation fails with empty version", func(t *testing.T) {
-		_, err := NewConfigAddressResolverByVersion("")
+		_, err := version.NewConfigAddressResolverByVersion("")
 		if err == nil {
 			t.Error("Expected error for empty version")
 		}
@@ -94,7 +95,7 @@ func TestConfigAddressResolver_ResolveAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resolver, err := NewConfigAddressResolverByVersion(tt.version)
+			resolver, err := version.NewConfigAddressResolverByVersion(tt.version)
 			if err != nil {
 				t.Fatalf("Failed to create resolver: %v", err)
 			}
@@ -134,7 +135,7 @@ func TestConfigAddressResolver_GetProcessName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resolver, err := NewConfigAddressResolverByVersion(tt.version)
+			resolver, err := version.NewConfigAddressResolverByVersion(tt.version)
 			if err != nil {
 				t.Fatalf("Failed to create resolver: %v", err)
 			}
@@ -167,7 +168,7 @@ func TestConfigAddressResolver_GetVersionName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resolver, err := NewConfigAddressResolverByVersion(tt.version)
+			resolver, err := version.NewConfigAddressResolverByVersion(tt.version)
 			if err != nil {
 				t.Fatalf("Failed to create resolver: %v", err)
 			}

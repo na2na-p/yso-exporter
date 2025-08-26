@@ -1,13 +1,15 @@
-package version
+package version_test
 
 import (
 	"testing"
+
+	"github.com/na2na/yso-exporter/internal/version"
 )
 
 // TestIntegrationWithBuiltinConfig tests the resolver with built-in configurations
 func TestIntegrationWithBuiltinConfig(t *testing.T) {
 	t.Run("create resolver with built-in jp_1.1.0.3 config", func(t *testing.T) {
-		resolver, err := NewConfigAddressResolverByVersion("jp_1.1.0.3")
+		resolver, err := version.NewConfigAddressResolverByVersion("jp_1.1.0.3")
 		if err != nil {
 			t.Fatalf("NewConfigAddressResolverByVersion failed: %v", err)
 		}
@@ -30,7 +32,7 @@ func TestIntegrationWithBuiltinConfig(t *testing.T) {
 	})
 
 	t.Run("resolve actual addresses from built-in config", func(t *testing.T) {
-		resolver, err := NewConfigAddressResolverByVersion("jp_1.1.0.3")
+		resolver, err := version.NewConfigAddressResolverByVersion("jp_1.1.0.3")
 		if err != nil {
 			t.Fatalf("Failed to create resolver: %v", err)
 		}
@@ -108,7 +110,7 @@ func TestIntegrationWithBuiltinConfig(t *testing.T) {
 	})
 
 	t.Run("create resolver with built-in jp_1.0.0.4 config", func(t *testing.T) {
-		resolver, err := NewConfigAddressResolverByVersion("jp_1.0.0.4")
+		resolver, err := version.NewConfigAddressResolverByVersion("jp_1.0.0.4")
 		if err != nil {
 			t.Fatalf("NewConfigAddressResolverByVersion failed: %v", err)
 		}

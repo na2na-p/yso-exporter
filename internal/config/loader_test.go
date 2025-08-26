@@ -1,31 +1,33 @@
-package config
+package config_test
 
 import (
 	"testing"
+
+	"github.com/na2na/yso-exporter/internal/config"
 )
 
 func TestLoadVersionConfigByName(t *testing.T) {
 	t.Run("successful load - jp_1.1.0.3", func(t *testing.T) {
-		config, err := LoadVersionConfigByName("jp_1.1.0.3")
+		cfg, err := config.LoadVersionConfigByName("jp_1.1.0.3")
 		if err != nil {
 			t.Fatalf("LoadVersionConfigByName failed: %v", err)
 		}
 
 		// Verify metadata
-		if config.Metadata.Name != "jp_1.1.0.3" {
-			t.Errorf("Expected name 'jp_1.1.0.3', got '%s'", config.Metadata.Name)
+		if cfg.Metadata.Name != "jp_1.1.0.3" {
+			t.Errorf("Expected name 'jp_1.1.0.3', got '%s'", cfg.Metadata.Name)
 		}
-		if config.Metadata.ProcessName != "YSO_WIN.exe" {
-			t.Errorf("Expected process_name 'YSO_WIN.exe', got '%s'", config.Metadata.ProcessName)
+		if cfg.Metadata.ProcessName != "YSO_WIN.exe" {
+			t.Errorf("Expected process_name 'YSO_WIN.exe', got '%s'", cfg.Metadata.ProcessName)
 		}
 
 		// Verify some addresses exist
-		if len(config.Addresses) == 0 {
+		if len(cfg.Addresses) == 0 {
 			t.Errorf("Expected addresses to be loaded")
 		}
 
 		// Check specific address
-		if addr, ok := config.Addresses["character"]; !ok {
+		if addr, ok := cfg.Addresses["character"]; !ok {
 			t.Errorf("Expected 'character' address to exist")
 		} else {
 			if addr.Type != "byte" {
@@ -35,29 +37,29 @@ func TestLoadVersionConfigByName(t *testing.T) {
 	})
 
 	t.Run("successful load - jp_1.0.0.4", func(t *testing.T) {
-		config, err := LoadVersionConfigByName("jp_1.0.0.4")
+		cfg, err := config.LoadVersionConfigByName("jp_1.0.0.4")
 		if err != nil {
 			t.Fatalf("LoadVersionConfigByName failed: %v", err)
 		}
 
 		// Verify metadata
-		if config.Metadata.Name != "jp_1.0.0.4" {
-			t.Errorf("Expected name 'jp_1.0.0.4', got '%s'", config.Metadata.Name)
+		if cfg.Metadata.Name != "jp_1.0.0.4" {
+			t.Errorf("Expected name 'jp_1.0.0.4', got '%s'", cfg.Metadata.Name)
 		}
-		if config.Metadata.ProcessName != "YSO_WIN.exe" {
-			t.Errorf("Expected process_name 'YSO_WIN.exe', got '%s'", config.Metadata.ProcessName)
+		if cfg.Metadata.ProcessName != "YSO_WIN.exe" {
+			t.Errorf("Expected process_name 'YSO_WIN.exe', got '%s'", cfg.Metadata.ProcessName)
 		}
 	})
 
 	t.Run("non-existent version", func(t *testing.T) {
-		_, err := LoadVersionConfigByName("non_existent")
+		_, err := config.LoadVersionConfigByName("non_existent")
 		if err == nil {
 			t.Errorf("Expected error for non-existent version")
 		}
 	})
 
 	t.Run("empty version name", func(t *testing.T) {
-		_, err := LoadVersionConfigByName("")
+		_, err := config.LoadVersionConfigByName("")
 		if err == nil {
 			t.Errorf("Expected error for empty version name")
 		}
@@ -65,7 +67,7 @@ func TestLoadVersionConfigByName(t *testing.T) {
 }
 
 func TestGetAvailableVersions(t *testing.T) {
-	versions := GetAvailableVersions()
+	versions := config.GetAvailableVersions()
 
 	if len(versions) != 2 {
 		t.Errorf("Expected 2 versions, got %d", len(versions))
@@ -122,7 +124,7 @@ func TestValidateVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ValidateVersion(tt.version)
+			got := config.ValidateVersion(tt.version)
 			if got != tt.want {
 				t.Errorf("ValidateVersion(%s) = %v, want %v", tt.version, got, tt.want)
 			}

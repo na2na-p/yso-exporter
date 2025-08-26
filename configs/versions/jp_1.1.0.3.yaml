@@ -15,7 +15,7 @@ addresses:
     description: "Current character ID (0=Adol, 1=Yunica, 2=Hugo, 3=Toal)"
   
   hp:
-    base: "0x70B1A0-0x142D0"  # 0x70B1A0 - 0x142D0 = 0x6F6ED0
+    base: "YSO_WIN.exe+2F6ED0"
     offsets: []
     type: float32
     description: "Current HP"
