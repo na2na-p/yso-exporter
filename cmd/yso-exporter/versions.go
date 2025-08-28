@@ -12,11 +12,7 @@ import (
 )
 
 func listAvailableVersions() {
-	versions, err := config.ListAvailableVersions()
-	if err != nil {
-		log.Printf("Error listing versions: %v", err)
-		return
-	}
+	versions := config.GetAvailableVersions()
 
 	fmt.Println("Available game versions:")
 	for i, version := range versions {
@@ -25,11 +21,7 @@ func listAvailableVersions() {
 }
 
 func selectVersionInteractively() string {
-	versions, err := config.ListAvailableVersions()
-	if err != nil {
-		log.Printf("Error listing versions: %v", err)
-		return ""
-	}
+	versions := config.GetAvailableVersions()
 
 	fmt.Println("Select a game version:")
 	for i, version := range versions {
@@ -57,9 +49,5 @@ func selectVersionInteractively() string {
 }
 
 func getAvailableVersions() []string {
-	versions, err := config.ListAvailableVersions()
-	if err != nil {
-		return []string{"jp_1.1.0.3"}
-	}
-	return versions
+	return config.GetAvailableVersions()
 }
