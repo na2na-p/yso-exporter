@@ -25,7 +25,7 @@ func ParseFlags() *Flags {
 
 	flag.StringVar(&flags.Version, "version", "", "Game version to monitor (if not specified, will prompt for selection)")
 	flag.IntVar(&flags.Port, "port", 8080, "HTTP server port for metrics endpoint")
-	flag.DurationVar(&flags.Interval, "interval", 200*time.Millisecond, "Polling interval for memory reads")
+	flag.DurationVar(&flags.Interval, "interval", 300*time.Millisecond, "Polling interval for memory reads")
 	flag.BoolVar(&flags.ListVersions, "list-versions", false, "List all available game versions")
 	flag.BoolVar(&flags.GUI, "gui", true, "Launch in GUI mode (default: true)")
 	flag.BoolVar(&flags.Debug, "debug", false, "Enable debug logging")
