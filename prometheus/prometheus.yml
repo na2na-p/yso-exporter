@@ -25,7 +25,9 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:8080']  # For Windows/Mac Docker Desktop
     scrape_interval: 300ms
-    scrape_timeout: 90ms
+    # host.docker.internal は Docker Desktop のプロキシ経由でレイテンシが
+    # スパイクすることがあるため、interval 未満の範囲で余裕を持たせる
+    scrape_timeout: 250ms
     metrics_path: '/metrics'
 
     relabel_configs:
