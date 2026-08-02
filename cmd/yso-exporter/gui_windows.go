@@ -17,6 +17,7 @@ type GUIApplication struct {
 	coordinator  *gui.EventCoordinator
 	mainWindow   *walk.MainWindow
 	builder      *gui.WindowBuilder
+	exiting      bool // 終了フラグ
 }
 
 // runGUI is the entry point for GUI mode
@@ -137,8 +138,18 @@ func (g *GUIApplication) setupSystemTray() error {
 	ni.SetToolTip("YSO Exporter")
 	ni.SetVisible(true)
 	
-	// Minimize to tray
+	// Set exit handler for coordinator
+	g.coordinator.SetExitHandler(func() {
+		g.exiting = true
+		ni.Dispose()
+		g.mainWindow.Close()
+	})
+	
+	// Minimize to tray (unless exiting)
 	g.mainWindow.Closing().Attach(func(canceled *bool, reason walk.CloseReason) {
+		if g.exiting {
+			return // 終了中はキャンセルしない
+		}
 		*canceled = true
 		g.mainWindow.Hide()
 	})
@@ -154,8 +165,7 @@ func (g *GUIApplication) setupSystemTray() error {
 	exitAction := walk.NewAction()
 	exitAction.SetText("Exit")
 	exitAction.Triggered().Attach(func() {
-		g.coordinator.OnStop()
-		walk.App().Exit(0)
+		g.coordinator.OnExit()
 	})
 	
 	ni.ContextMenu().Actions().Add(exitAction)

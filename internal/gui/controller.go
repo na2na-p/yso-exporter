@@ -30,6 +30,7 @@ type EventHandler interface {
 	OnVersionChange(version string)
 	OnProcessConnected(processName string)
 	OnProcessLost(processName string)
+	OnExit()
 }
 
 // GUIConfig holds GUI-specific configuration

@@ -108,6 +108,7 @@ func (wb *WindowBuilder) createControlButtons() Widget {
 		Children: []Widget{
 			wb.createStartButton(),
 			wb.createStopButton(),
+			wb.createExitButton(),
 		},
 	}
 }
@@ -133,6 +134,18 @@ func (wb *WindowBuilder) createStopButton() Widget {
 		OnClicked: func() {
 			if err := wb.controller.Stop(); err == nil {
 				wb.updateUI()
+			}
+		},
+	}
+}
+
+
+func (wb *WindowBuilder) createExitButton() Widget {
+	return PushButton{
+		Text: "Exit",
+		OnClicked: func() {
+			if wb.controller.eventHandler != nil {
+				wb.controller.eventHandler.OnExit()
 			}
 		},
 	}

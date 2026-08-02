@@ -8,10 +8,11 @@ import (
 // EventCoordinator coordinates events between GUI and application
 // カプセル化: イベント調整の単一責任
 type EventCoordinator struct {
-	controller  *Controller
-	lifecycle   ApplicationLifecycle
-	adapter     ApplicationAdapter
-	notifier    *ProcessNotifier
+	controller   *Controller
+	lifecycle    ApplicationLifecycle
+	adapter      ApplicationAdapter
+	notifier     *ProcessNotifier
+	exitHandler  func()
 }
 
 // NewEventCoordinator creates a new event coordinator
@@ -91,5 +92,17 @@ func (e *EventCoordinator) OnProcessLost(processName string) {
 	log.Printf("Process lost: %s", processName)
 	if e.controller != nil {
 		e.controller.UpdateProcessStatus(false, processName)
+	}
+}
+
+
+func (e *EventCoordinator) SetExitHandler(handler func()) {
+	e.exitHandler = handler
+}
+
+func (e *EventCoordinator) OnExit() {
+	e.OnStop()
+	if e.exitHandler != nil {
+		e.exitHandler()
 	}
 }
