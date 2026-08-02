@@ -138,11 +138,15 @@ func NewApplication(flags *config.Flags) (*Application, error) {
 	app.memoryReader = memoryReader
 
 	// Collectorの初期化（ゲーム種別に応じたCollectorを選択）
+	// SnapshotCollectorで包み、収集はPollerのみが行い、
+	// HTTPハンドラは収集済みスナップショットの参照のみを行うようにする
+	// （収集と参照の並行実行によるメトリクス欠落を防ぐため）
 	gameCollector := collector.NewCollectorForGame(gameOf(flags.Version), addressResolver, memoryReader)
-	app.collector = gameCollector
+	snapshotCollector := collector.NewSnapshotCollector(gameCollector)
+	app.collector = snapshotCollector
 
 	// Pollerの初期化
-	app.poller = collector.NewPoller(gameCollector)
+	app.poller = collector.NewPoller(snapshotCollector)
 
 	// ProcessEventHandlerの作成
 	processEventHandler := &ProcessEventHandler{
@@ -191,11 +195,15 @@ func NewApplicationWithCallback(flags *config.Flags, callback ProcessStatusCallb
 	app.memoryReader = memoryReader
 
 	// Collectorの初期化（ゲーム種別に応じたCollectorを選択）
+	// SnapshotCollectorで包み、収集はPollerのみが行い、
+	// HTTPハンドラは収集済みスナップショットの参照のみを行うようにする
+	// （収集と参照の並行実行によるメトリクス欠落を防ぐため）
 	gameCollector := collector.NewCollectorForGame(gameOf(flags.Version), addressResolver, memoryReader)
-	app.collector = gameCollector
+	snapshotCollector := collector.NewSnapshotCollector(gameCollector)
+	app.collector = snapshotCollector
 
 	// Pollerの初期化
-	app.poller = collector.NewPoller(gameCollector)
+	app.poller = collector.NewPoller(snapshotCollector)
 
 	// ProcessEventHandlerの作成（コールバック付き）
 	processEventHandler := &ProcessEventHandler{

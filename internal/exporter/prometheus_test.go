@@ -50,20 +50,19 @@ func TestPrometheusExporter_ServeHTTP(t *testing.T) {
 		path   string
 	}
 	tests := []struct {
-		name           string
-		fields         fields
-		args           args
-		wantStatusCode int
-		wantHeaders    map[string]string
+		name             string
+		fields           fields
+		args             args
+		wantStatusCode   int
+		wantHeaders      map[string]string
 		wantBodyContains []string
-		wantErr        error
+		wantErr          error
 	}{
 		{
 			name: "正常系: Gaugeメトリクスが正しいPrometheus形式で出力される",
 			fields: fields{
 				collector: func(ctrl *gomock.Controller) collector.Collector {
 					m := mocks.NewMockCollector(ctrl)
-					m.EXPECT().Collect().Return(nil)
 					m.EXPECT().GetMetrics().Return([]collector.Metric{
 						{
 							Name:   "player_hp",
@@ -94,7 +93,6 @@ func TestPrometheusExporter_ServeHTTP(t *testing.T) {
 			fields: fields{
 				collector: func(ctrl *gomock.Controller) collector.Collector {
 					m := mocks.NewMockCollector(ctrl)
-					m.EXPECT().Collect().Return(nil)
 					m.EXPECT().GetMetrics().Return([]collector.Metric{
 						{
 							Name:   "enemies_defeated_total",
@@ -125,7 +123,6 @@ func TestPrometheusExporter_ServeHTTP(t *testing.T) {
 			fields: fields{
 				collector: func(ctrl *gomock.Controller) collector.Collector {
 					m := mocks.NewMockCollector(ctrl)
-					m.EXPECT().Collect().Return(nil)
 					m.EXPECT().GetMetrics().Return([]collector.Metric{
 						{
 							Name:   "player_hp",
@@ -161,7 +158,6 @@ func TestPrometheusExporter_ServeHTTP(t *testing.T) {
 			fields: fields{
 				collector: func(ctrl *gomock.Controller) collector.Collector {
 					m := mocks.NewMockCollector(ctrl)
-					m.EXPECT().Collect().Return(nil)
 					m.EXPECT().GetMetrics().Return([]collector.Metric{
 						{
 							Name:   "game_version",
@@ -186,11 +182,11 @@ func TestPrometheusExporter_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
-			name: "異常系: Collector.Collect()でエラーが発生した場合、500エラーが返る",
+			name: "正常系: スナップショットが空でも200でメトリクス0件のレスポンスが返る",
 			fields: fields{
 				collector: func(ctrl *gomock.Controller) collector.Collector {
 					m := mocks.NewMockCollector(ctrl)
-					m.EXPECT().Collect().Return(http.ErrServerClosed)
+					m.EXPECT().GetMetrics().Return([]collector.Metric{})
 					return m
 				},
 			},
@@ -198,12 +194,9 @@ func TestPrometheusExporter_ServeHTTP(t *testing.T) {
 				method: http.MethodGet,
 				path:   "/metrics",
 			},
-			wantStatusCode: http.StatusInternalServerError,
+			wantStatusCode: http.StatusOK,
 			wantHeaders: map[string]string{
-				"Content-Type": "text/plain; charset=utf-8",
-			},
-			wantBodyContains: []string{
-				"Error collecting metrics",
+				"Content-Type": "text/plain; version=0.0.4; charset=utf-8",
 			},
 		},
 		{

@@ -33,21 +33,44 @@ var ys6PlayerStructMetrics = []string{
 	"equipped_sword", "sword_livart_gauge", "sword_brillante_gauge", "sword_ericcil_gauge",
 }
 
+// ys6MaxRetainedFailures は、直前値を保持したまま出力し続ける連続失敗サイクル数の上限です。
+// ポーリング間隔300msの下で2サイクル(約0.6秒)を許容上限とすることで、
+// ゲーム終了後に古い値を出し続ける時間をこの範囲に抑えます。
+const ys6MaxRetainedFailures = 2
+
+// ys6MetricRetention は、1メトリクスキー分の「直前の成功値」と「連続失敗サイクル数」を保持します。
+type ys6MetricRetention struct {
+	hasValue bool
+	value    float64
+	failures int
+}
+
 // Ys6Collector は、Ys VI: The Ark of Napishtim (YS6_WIN.exe) のゲームメトリクスを収集するCollectorの実装です。
 // カプセル化の原則に従い、Ys6専用メトリクス収集という単一の目的を持ちます。
 type Ys6Collector struct {
 	resolver version.AddressResolver
 	reader   memory.MemoryReader
 	metrics  []Metric
+
+	// retentionStates は、zeroOnFailureでないメトリクスの直前値保持状態をキーごとに保持します。
+	// Collectの呼び出し元はSnapshotCollector経由のPoller1本に直列化されるため、
+	// ここに排他制御は設けていません。
+	retentionStates map[string]*ys6MetricRetention
+
+	// playerBaseFailures と playerBaseLoaded は、player_base自体の読み取りが一時的に失敗した際に
+	// 直前のロード状態を維持するための状態です。
+	playerBaseFailures int
+	playerBaseLoaded   bool
 }
 
 // NewYs6Collector は、Ys6Collectorの新しいインスタンスを作成します。
 // 関心の分離の原則に従い、アドレス解決とメモリ読み取りを外部に委譲します。
 func NewYs6Collector(resolver version.AddressResolver, reader memory.MemoryReader) *Ys6Collector {
 	return &Ys6Collector{
-		resolver: resolver,
-		reader:   reader,
-		metrics:  make([]Metric, 0),
+		resolver:        resolver,
+		reader:          reader,
+		metrics:         make([]Metric, 0),
+		retentionStates: make(map[string]*ys6MetricRetention),
 	}
 }
 
@@ -75,74 +98,115 @@ func (c *Ys6Collector) GetMetrics() []Metric {
 	return c.metrics
 }
 
-// collectPlayerBase は、player_base の値を読み取り ys6_loaded メトリクスを出力します。
-// アドレス解決または読み取りに失敗した場合は、未ロードとして扱います。
+// collectPlayerBase は、player_base(BaseとBaseAddの合算値)を解決し ys6_loaded メトリクスを出力します。
+//
+// Base単体([177A44]相当)はプレイ中でも0〜0xF0の間で頻繁に変動し、0はプレイ中の正常値でもあるため、
+// 実体ポインタを持つBaseAdd([177A48]相当)との合算値で判定します。合算値自体がプレイヤー構造体の
+// 実アドレスであるため、アドレスとしてデリファレンスせず非ゼロかどうかのみで判定します。
+//
+// 解決成功時は合算値そのものに基づき判定します(合算値0は本物のアンロードとして、
+// 全メトリクスの保持値・失敗カウンタをクリアします)。
+// 解決失敗時は一時的な失敗とみなし、連続失敗が ys6MaxRetainedFailures 以内なら
+// 直前のロード状態を維持します(直前がロード中ならプレイヤー系メトリクスの収集も通常どおり試行します)。
+// 連続失敗がそれを超えたら未ロード扱いとし、保持値をクリアします。
 func (c *Ys6Collector) collectPlayerBase() bool {
-	value, err := c.readInt32(playerBaseKey)
-	loaded := err == nil && value != 0
+	sum, err := c.readPlayerBaseSum()
+
+	var loaded bool
+	if err == nil {
+		loaded = sum != 0
+		c.playerBaseFailures = 0
+		if !loaded {
+			c.clearRetention()
+		}
+	} else {
+		c.playerBaseFailures++
+		if c.playerBaseFailures <= ys6MaxRetainedFailures {
+			loaded = c.playerBaseLoaded
+		} else {
+			loaded = false
+			c.clearRetention()
+		}
+	}
+	c.playerBaseLoaded = loaded
 
 	loadedValue := float64(0)
 	if loaded {
 		loadedValue = 1
 	}
-
-	c.metrics = append(c.metrics, Metric{
-		Name:   ys6MetricName(playerBaseKey),
-		Value:  loadedValue,
-		Type:   Gauge,
-		Labels: make(map[string]string),
-	})
+	c.appendMetric(playerBaseKey, loadedValue)
 
 	return loaded
+}
+
+// clearRetention は、全メトリクスの直前値保持状態を破棄します。
+// プレイヤー構造体が本物のアンロード(または諦め)に至った際、次のロード後に
+// 古いサイクルの値が漏れ出さないようにするために呼び出します。
+func (c *Ys6Collector) clearRetention() {
+	c.retentionStates = make(map[string]*ys6MetricRetention)
 }
 
 // playerBaseKey は、プレイヤー構造体ポインタを表すアドレス設定のキーです。
 const playerBaseKey = "player_base"
 
+// readPlayerBaseSum は、player_base の Base と BaseAdd がそれぞれ指すアドレスから
+// 32bit値を読み取り合算した値を返します。合算値自体がプレイヤー構造体の実アドレスであり、
+// 非ゼロかどうかでロード判定に用いるため、この値をさらにアドレスとして読み取ってはいけません。
+func (c *Ys6Collector) readPlayerBaseSum() (uintptr, error) {
+	cfg, err := c.resolver.ResolveAddress(playerBaseKey)
+	if err != nil {
+		return 0, fmt.Errorf("failed to resolve address for %s: %w", playerBaseKey, err)
+	}
+
+	return c.resolveSumAddress(cfg)
+}
+
 // collectMetric は、指定キーのメトリクスを収集しmetricsに追加します。
-// zeroOnFailure が true の場合、読み取り失敗時に0を出力します。falseの場合は欠損として出力しません。
+// zeroOnFailure が true の場合、読み取り失敗時に0を出力します。
+// falseの場合は、直前の成功値を ys6MaxRetainedFailures サイクルまで保持して出力し、
+// それを超えて連続失敗したら欠損として出力しません。
 func (c *Ys6Collector) collectMetric(key string, zeroOnFailure bool) {
-	cfg, err := c.resolver.ResolveAddress(key)
-	if err != nil {
-		c.emitOnFailure(key, zeroOnFailure)
+	value, err := c.readMetricValue(key)
+
+	if zeroOnFailure {
+		if err != nil {
+			c.appendMetric(key, 0)
+			return
+		}
+		c.appendMetric(key, value)
 		return
 	}
 
-	address, err := c.resolveFinalAddress(cfg)
-	if err != nil {
-		c.emitOnFailure(key, zeroOnFailure)
-		return
-	}
-
-	value, err := c.readByType(address, cfg.Type)
-	if err != nil {
-		c.emitOnFailure(key, zeroOnFailure)
-		return
-	}
-
-	c.metrics = append(c.metrics, Metric{
-		Name:   ys6MetricName(key),
-		Value:  value,
-		Type:   Gauge,
-		Labels: make(map[string]string),
-	})
+	c.collectWithRetention(key, value, err)
 }
 
-// emitOnFailure は、zeroOnFailureがtrueの場合のみ値0のメトリクスを出力します。
-func (c *Ys6Collector) emitOnFailure(key string, zeroOnFailure bool) {
-	if !zeroOnFailure {
+// collectWithRetention は、直前値保持を伴うメトリクス収集を行います。
+// 読み取り成功時は保持値を更新し失敗カウンタをリセットします。
+// 読み取り失敗時は失敗カウンタを増やし、保持値があり許容範囲内であればその値を出力します。
+func (c *Ys6Collector) collectWithRetention(key string, value float64, err error) {
+	state, ok := c.retentionStates[key]
+	if !ok {
+		state = &ys6MetricRetention{}
+		c.retentionStates[key] = state
+	}
+
+	if err == nil {
+		state.hasValue = true
+		state.value = value
+		state.failures = 0
+		c.appendMetric(key, value)
 		return
 	}
-	c.metrics = append(c.metrics, Metric{
-		Name:   ys6MetricName(key),
-		Value:  0,
-		Type:   Gauge,
-		Labels: make(map[string]string),
-	})
+
+	state.failures++
+	if state.hasValue && state.failures <= ys6MaxRetainedFailures {
+		c.appendMetric(key, state.value)
+	}
 }
 
-// readInt32 は、指定キーのアドレスを解決しint32値を読み取ります。
-func (c *Ys6Collector) readInt32(key string) (int32, error) {
+// readMetricValue は、指定キーのアドレスを解決し値を読み取ります。
+// アドレス解決・最終アドレス解決・値の読み取りのいずれかに失敗した場合はエラーを返します。
+func (c *Ys6Collector) readMetricValue(key string) (float64, error) {
 	cfg, err := c.resolver.ResolveAddress(key)
 	if err != nil {
 		return 0, fmt.Errorf("failed to resolve address for %s: %w", key, err)
@@ -153,43 +217,67 @@ func (c *Ys6Collector) readInt32(key string) (int32, error) {
 		return 0, fmt.Errorf("failed to resolve final address for %s: %w", key, err)
 	}
 
-	value, err := c.reader.ReadInt32(address)
+	value, err := c.readByType(address, cfg.Type)
 	if err != nil {
-		return 0, fmt.Errorf("failed to read int32 for %s: %w", key, err)
+		return 0, fmt.Errorf("failed to read value for %s: %w", key, err)
 	}
 
 	return value, nil
 }
 
-// resolveFinalAddress は、AddressConfigから最終的な読み取りアドレスを解決します。
-//
-// BaseAdd が指定されている場合、Base と BaseAdd それぞれが指すアドレスから
-// 32bit値を読み取り加算した値をベースポインタ P とします。
-// Offsets[0] はデリファレンスなしで P に単純加算し、Offsets[1:] は
-// 通常のポインタチェインとして解決します。
-//
-// BaseAdd が指定されていない場合は、従来どおり Base を起点に Offsets を
-// ポインタチェインとして解決します(Offsetsが空の場合はBaseをそのまま返す)。
-func (c *Ys6Collector) resolveFinalAddress(cfg *config.AddressConfig) (uintptr, error) {
+// appendMetric は、指定キー・値のメトリクスをmetricsへ追加します。
+func (c *Ys6Collector) appendMetric(key string, value float64) {
+	c.metrics = append(c.metrics, Metric{
+		Name:   ys6MetricName(key),
+		Value:  value,
+		Type:   Gauge,
+		Labels: make(map[string]string),
+	})
+}
+
+// resolveSumAddress は、cfg.Base と(指定されていれば)cfg.BaseAdd がそれぞれ指すアドレスから
+// 32bit値を読み取り合算した値を返します。BaseAdd 未指定時は Base の解決値のみを返します。
+// resolveFinalAddress のBaseAdd合算処理と player_base のゲーティング判定の両方が
+// 同じ「Base+BaseAddの合算値を得る」という関心を持つため、ここに集約しています。
+func (c *Ys6Collector) resolveSumAddress(cfg *config.AddressConfig) (uintptr, error) {
 	baseAddress, err := c.reader.ParseAndResolveAddress(cfg.Base)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse base address: %w", err)
 	}
 
+	if cfg.BaseAdd == nil {
+		return baseAddress, nil
+	}
+
+	baseAddAddress, err := c.reader.ParseAndResolveAddress(cfg.BaseAdd)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse base_add address: %w", err)
+	}
+
+	sum, err := c.reader.ResolveSumBase(baseAddress, baseAddAddress)
+	if err != nil {
+		return 0, fmt.Errorf("failed to resolve summed base: %w", err)
+	}
+
+	return sum, nil
+}
+
+// resolveFinalAddress は、AddressConfigから最終的な読み取りアドレスを解決します。
+//
+// BaseAdd が指定されている場合、合算値をベースポインタ P とし、Offsets[0] は
+// デリファレンスなしで P に単純加算、Offsets[1:] は通常のポインタチェインとして解決します。
+//
+// BaseAdd が指定されていない場合は、従来どおり Base を起点に Offsets を
+// ポインタチェインとして解決します(Offsetsが空の場合はBaseをそのまま返す)。
+func (c *Ys6Collector) resolveFinalAddress(cfg *config.AddressConfig) (uintptr, error) {
+	current, err := c.resolveSumAddress(cfg)
+	if err != nil {
+		return 0, err
+	}
+
 	offsets := cfg.Offsets
-	current := baseAddress
 
 	if cfg.BaseAdd != nil {
-		baseAddAddress, err := c.reader.ParseAndResolveAddress(cfg.BaseAdd)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse base_add address: %w", err)
-		}
-
-		current, err = c.reader.ResolveSumBase(baseAddress, baseAddAddress)
-		if err != nil {
-			return 0, fmt.Errorf("failed to resolve summed base: %w", err)
-		}
-
 		if len(offsets) == 0 {
 			return current, nil
 		}
