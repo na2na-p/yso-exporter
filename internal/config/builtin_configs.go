@@ -1,5 +1,7 @@
 package config
 
+import "sort"
+
 // BuiltinVersionConfigs contains all built-in version configurations
 // These are the only supported configurations (no external YAML files)
 var BuiltinVersionConfigs = map[string]*VersionConfig{
@@ -9,11 +11,13 @@ var BuiltinVersionConfigs = map[string]*VersionConfig{
 			DisplayName string `yaml:"display_name"`
 			Description string `yaml:"description"`
 			ProcessName string `yaml:"process_name"`
+			Game        string `yaml:"game"`
 		}{
 			Name:        "jp_1.1.0.3",
 			DisplayName: "Japanese v1.1.0.3",
 			Description: "Ys Origin Japanese version 1.1.0.3 (日本語版)",
 			ProcessName: "YSO_WIN.exe",
+			Game:        "yso",
 		},
 		Addresses: map[string]AddressConfig{
 			"character": {
@@ -138,11 +142,13 @@ var BuiltinVersionConfigs = map[string]*VersionConfig{
 			DisplayName string `yaml:"display_name"`
 			Description string `yaml:"description"`
 			ProcessName string `yaml:"process_name"`
+			Game        string `yaml:"game"`
 		}{
 			Name:        "jp_1.0.0.4",
 			DisplayName: "Japanese v1.0.0.4",
 			Description: "Ys Origin Japanese version 1.0.0.4 (日本語版)",
 			ProcessName: "YSO_WIN.exe",
+			Game:        "yso",
 		},
 		Addresses: map[string]AddressConfig{
 			"character": {
@@ -261,14 +267,197 @@ var BuiltinVersionConfigs = map[string]*VersionConfig{
 			},
 		},
 	},
+	"ys6_jp_1.3.1.0": {
+		Metadata: struct {
+			Name        string `yaml:"name"`
+			DisplayName string `yaml:"display_name"`
+			Description string `yaml:"description"`
+			ProcessName string `yaml:"process_name"`
+			Game        string `yaml:"game"`
+		}{
+			Name:        "ys6_jp_1.3.1.0",
+			DisplayName: "Ys VI Japanese v1.3.1.0",
+			Description: "Ys VI: The Ark of Napishtim 日本語版 1.3.1.0",
+			ProcessName: "YS6_WIN.exe",
+			Game:        "ys6",
+		},
+		Addresses: map[string]AddressConfig{
+			"player_base": {
+				Base:        "YS6_WIN.exe+177A44",
+				Offsets:     []uint32{},
+				Type:        "int32",
+				Description: "プレイヤー構造体ポインタ (0=未ロード)",
+			},
+			"room_id": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x118},
+				Type:        "int32",
+				Description: "現在の部屋ID (-1=未ロード, 0=マップ間中継)",
+			},
+			"level": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x27C},
+				Type:        "int32",
+				Description: "レベル",
+			},
+			"experience": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x264},
+				Type:        "float32",
+				Description: "経験値",
+			},
+			"sword_livart_level": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x21C},
+				Type:        "int32",
+				Description: "リヴァート(風/青)剣レベル",
+			},
+			"sword_brillante_level": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x22C},
+				Type:        "int32",
+				Description: "ブリランテ(炎/赤)剣レベル",
+			},
+			"sword_ericcil_level": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x23C},
+				Type:        "int32",
+				Description: "エリシール(雷)剣レベル",
+			},
+			"emel": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x45C},
+				Type:        "int32",
+				Description: "エメル保有数",
+			},
+			"armor": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x2E8},
+				Type:        "int32",
+				Description: "装備防具ID (-1=未装備)",
+			},
+			"shield": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x2D0},
+				Type:        "int32",
+				Description: "装備盾ID (-1=未装備)",
+			},
+			"game_mode": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x4D8},
+				Type:        "int32",
+				Description: "0=ストーリー, 1=タイムアタック",
+			},
+			"hp": {
+				Base:        "YS6_WIN.exe+27C2C",
+				Offsets:     []uint32{0x30},
+				Type:        "float32",
+				Description: "現在HP",
+			},
+			"hp_visual": {
+				Base:        "YS6_WIN.exe+27C2C",
+				Offsets:     []uint32{0x34},
+				Type:        "float32",
+				Description: "表示上のHP",
+			},
+			"mp_gauge": {
+				Base:        "YS6_WIN.exe+177D10",
+				Offsets:     []uint32{},
+				Type:        "int32",
+				Description: "MPゲージ(現在装備の剣)",
+			},
+			"boss_hp": {
+				Base:        "YS6_WIN.exe+13A648",
+				Offsets:     []uint32{},
+				Type:        "float32",
+				Description: "ボスHP",
+			},
+			"boss_max_hp": {
+				Base:        "YS6_WIN.exe+13A650",
+				Offsets:     []uint32{},
+				Type:        "float32",
+				Description: "ボス最大HP",
+			},
+			"position_x": {
+				Base:        "YS6_WIN.exe+14B284",
+				Offsets:     []uint32{0x0, 0x58},
+				Type:        "float32",
+				Description: "プレイヤーX座標",
+			},
+			"position_y": {
+				Base:        "YS6_WIN.exe+14B284",
+				Offsets:     []uint32{0x0, 0x50},
+				Type:        "float32",
+				Description: "プレイヤーY座標",
+			},
+			"position_z": {
+				Base:        "YS6_WIN.exe+14B284",
+				Offsets:     []uint32{0x0, 0x54},
+				Type:        "float32",
+				Description: "プレイヤーZ座標",
+			},
+			"equipped_sword": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x430},
+				Type:        "int32",
+				Description: "装備中の剣 (0=リヴァート(青), 1=ブリランテ(赤), 2=エリシール(雷))",
+			},
+			"sword_livart_gauge": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x8B0},
+				Type:        "float32",
+				Description: "リヴァート剣魔法ゲージ (0〜3000、装備中の剣のみ自動回復)",
+			},
+			"sword_brillante_gauge": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x8B4},
+				Type:        "float32",
+				Description: "ブリランテ剣魔法ゲージ (0〜3000、装備中の剣のみ自動回復)",
+			},
+			"sword_ericcil_gauge": {
+				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
+				Offsets:     []uint32{0x8B8},
+				Type:        "float32",
+				Description: "エリシール剣魔法ゲージ (0〜3000、装備中の剣のみ自動回復)",
+			},
+			"max_hp": {
+				Base:        "YS6_WIN.exe+13A5C8",
+				Offsets:     []uint32{},
+				Type:        "float32",
+				Description: "プレイヤー最大HP",
+			},
+			"on_ground": {
+				Base:        "YS6_WIN.exe+14B284",
+				Offsets:     []uint32{0x0, 0x46C},
+				Type:        "int32",
+				Description: "接地状態 (1=接地, 0=空中)",
+			},
+		},
+	},
 }
 
 // GetAvailableVersions returns all available built-in versions
+// mapのrange順は実行のたびに変わるため、対話選択の番号を安定させるためソートして返します。
 func GetAvailableVersions() []string {
 	versions := make([]string, 0, len(BuiltinVersionConfigs))
 	for version := range BuiltinVersionConfigs {
 		versions = append(versions, version)
 	}
+	sort.Strings(versions)
 	return versions
 }
 

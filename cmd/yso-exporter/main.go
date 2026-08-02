@@ -137,12 +137,12 @@ func NewApplication(flags *config.Flags) (*Application, error) {
 	memoryReader := memory.NewWindowsMemoryReader(processFinder)
 	app.memoryReader = memoryReader
 
-	// Collectorの初期化
-	basicCollector := collector.NewBasicCollector(addressResolver, memoryReader)
-	app.collector = basicCollector
+	// Collectorの初期化（ゲーム種別に応じたCollectorを選択）
+	gameCollector := collector.NewCollectorForGame(gameOf(flags.Version), addressResolver, memoryReader)
+	app.collector = gameCollector
 
 	// Pollerの初期化
-	app.poller = collector.NewPoller(basicCollector)
+	app.poller = collector.NewPoller(gameCollector)
 
 	// ProcessEventHandlerの作成
 	processEventHandler := &ProcessEventHandler{
@@ -190,12 +190,12 @@ func NewApplicationWithCallback(flags *config.Flags, callback ProcessStatusCallb
 	memoryReader := memory.NewWindowsMemoryReader(processFinder)
 	app.memoryReader = memoryReader
 
-	// Collectorの初期化
-	basicCollector := collector.NewBasicCollector(addressResolver, memoryReader)
-	app.collector = basicCollector
+	// Collectorの初期化（ゲーム種別に応じたCollectorを選択）
+	gameCollector := collector.NewCollectorForGame(gameOf(flags.Version), addressResolver, memoryReader)
+	app.collector = gameCollector
 
 	// Pollerの初期化
-	app.poller = collector.NewPoller(basicCollector)
+	app.poller = collector.NewPoller(gameCollector)
 
 	// ProcessEventHandlerの作成（コールバック付き）
 	processEventHandler := &ProcessEventHandler{
@@ -217,6 +217,16 @@ func NewApplicationWithCallback(flags *config.Flags, callback ProcessStatusCallb
 	}
 
 	return app, nil
+}
+
+// gameOf は、指定されたバージョン名に対応するゲーム識別子を返します。
+// バージョンが見つからない場合は空文字を返します（BasicCollectorへのフォールバック）。
+func gameOf(versionName string) string {
+	versionConfig, ok := config.GetVersionConfig(versionName)
+	if !ok {
+		return ""
+	}
+	return versionConfig.Metadata.Game
 }
 
 // setupHTTPServer configures the HTTP server with all endpoints

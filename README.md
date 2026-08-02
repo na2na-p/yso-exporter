@@ -15,8 +15,12 @@ Ys Origin 用の Prometheus Metrics Exporter。
 
 ## サポートするゲームバージョン
 
+### Ys Origin
 - 日本語版 v1.1.0.3 (`jp_1.1.0.3`)
 - 日本語版 v1.0.0.4 (`jp_1.0.0.4`)
+
+### Ys VI: The Ark of Napishtim
+- 日本語版 v1.3.1.0 (`ys6_jp_1.3.1.0`)
 
 ## クイックスタート
 
@@ -112,7 +116,9 @@ yso-exporter.exe --interval 50ms
 
 エクスポーターは現在以下のメトリクスを提供しています:
 
-### プレイヤーステータス
+### Ys Origin (`jp_1.1.0.3` / `jp_1.0.0.4`)
+
+#### プレイヤーステータス
 - `yso_character` - 現在のキャラクター (0=Yunica, 1=Hugo, 2=Toal)
 - `yso_level` - キャラクターレベル
 - `yso_exp` - 経験値
@@ -122,12 +128,12 @@ yso-exporter.exe --interval 50ms
 - `yso_boost` - ブーストゲージ
 - `yso_equipped_skill` - 装備中のスキル (116=Wind, 117=Thunder, 118=Fire, 255=None)
 
-### ボス戦闘メトリクス
+#### ボス戦闘メトリクス
 - `yso_boss_hp_floor` - フロアボスのHP
 - `yso_boss_hp` - ボスHP (汎用)
 - `yso_boss_hp_velg_pict` - ベルガー/ピクティモスのHP
 
-### ステータスブースト（秘薬）
+#### ステータスブースト（秘薬）
 - `yso_str_boost` - STRブースト値
 - `yso_def_boost` - DEFブースト値
 - `yso_mp_boost` - MPブースト倍率
@@ -135,9 +141,47 @@ yso-exporter.exe --interval 50ms
 - `yso_def_boost_time` - DEFブースト残り時間
 - `yso_mp_boost_time` - MPブースト残り時間
 
-### 経験値レート
+#### 経験値レート
 - `yso_exp_rate` - ヒットカウント（経験値ブースト）
 - `yso_exp_rate_time` - 経験値レート残り時間（最大720）
+
+### Ys VI: The Ark of Napishtim (`ys6_jp_1.3.1.0`)
+
+`ys6_loaded` は、プレイヤー構造体のロード状態を示す 0/1 のメトリクスです。
+`ys6_loaded` が 0 の場合(プレイヤー構造体が未ロード、または読み取りに失敗した場合)、
+下記「プレイヤー構造体系メトリクス」は一切出力されません（欠損）。
+一方、「常時収集メトリクス」は `ys6_loaded` の値に関係なく収集を試みます。
+
+#### ロード状態
+- `ys6_loaded` - プレイヤー構造体のロード状態 (0=未ロード, 1=ロード済み)
+
+#### プレイヤー構造体系メトリクス（`ys6_loaded=1` の場合のみ出力）
+- `ys6_room_id` - 現在の部屋ID (-1=未ロード, 0=マップ間中継)
+- `ys6_level` - レベル
+- `ys6_exp` - 経験値
+- `ys6_sword_livart_level` - リヴァート(風/青)剣レベル
+- `ys6_sword_brillante_level` - ブリランテ(炎/赤)剣レベル
+- `ys6_sword_ericcil_level` - エリシール(雷)剣レベル
+- `ys6_emel` - エメル保有数
+- `ys6_armor` - 装備防具ID (-1=未装備)
+- `ys6_shield` - 装備盾ID (-1=未装備)
+- `ys6_game_mode` - ゲームモード (0=ストーリー, 1=タイムアタック)
+- `ys6_equipped_sword` - 装備中の剣 (0=リヴァート(青), 1=ブリランテ(赤), 2=エリシール(雷))
+- `ys6_sword_livart_gauge` - リヴァート剣魔法ゲージ (0〜3000、装備中の剣のみ自動回復)
+- `ys6_sword_brillante_gauge` - ブリランテ剣魔法ゲージ (0〜3000、装備中の剣のみ自動回復)
+- `ys6_sword_ericcil_gauge` - エリシール剣魔法ゲージ (0〜3000、装備中の剣のみ自動回復)
+
+#### 常時収集メトリクス（ロード状態に関係なく収集を試みる）
+- `ys6_hp` - 現在HP
+- `ys6_hp_visual` - 表示上のHP
+- `ys6_max_hp` - プレイヤー最大HP
+- `ys6_mp_gauge` - MPゲージ(現在装備の剣)
+- `ys6_boss_hp` - ボスHP（読み取り失敗時は0を出力）
+- `ys6_boss_max_hp` - ボス最大HP（読み取り失敗時は0を出力）
+- `ys6_position_x` - プレイヤーX座標
+- `ys6_position_y` - プレイヤーY座標
+- `ys6_position_z` - プレイヤーZ座標
+- `ys6_on_ground` - 接地状態 (1=接地, 0=空中)
 
 ## モニタリングスタック
 
@@ -157,6 +201,10 @@ docker compose up -d
 
 ### Grafana ダッシュボード
 
+Ys Origin と Ys VI それぞれに専用のダッシュボードが用意されており、`grafana/dashboards/` 配下の JSON がファイルプロビジョニングで自動的に読み込まれます。
+
+#### YS Origin - Overview (`grafana/dashboards/yso-overview.json`)
+
 ![YSO-Exporter Dashboard](./example.png)
 
 以下を可視化する事前設定されたダッシュボードが含まれています:
@@ -173,6 +221,21 @@ docker compose up -d
 - 時系列データの視覚化
 - ボスHPの複数系統同時表示
 - Status Boostsパネルの下限: 0
+
+#### Ys VI - Overview (`grafana/dashboards/ys6-overview.json`)
+
+Ys VI: The Ark of Napishtim (`ys6_*` メトリクス) 専用のダッシュボードです。以下を可視化します:
+- HP / 最大HP / MPゲージのリアルタイム追跡
+- 装備中の剣とゲームモード（ストーリー/タイムアタック）
+- プレイヤー構造体のロード状態 (`ys6_loaded`)
+- ボスHP（非戦闘時は0を表示）
+- 剣魔法ゲージ（リヴァート/ブリランテ/エリシール、0〜3000）
+- 接地状態（1=接地, 0=空中）
+- 剣強化レベル（3剣それぞれ）
+- レベル・経験値・経験値レート
+- エメル保有数、プレイヤー座標、部屋ID遷移（ルート検証用）
+
+ダッシュボード設定は YS Origin 用と同様（自動更新間隔500msなど）です。
 
 ## 開発
 

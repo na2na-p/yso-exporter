@@ -3,6 +3,8 @@ package config_test
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/na2na/yso-exporter/internal/config"
 )
 
@@ -51,6 +53,33 @@ func TestLoadVersionConfigByName(t *testing.T) {
 		}
 	})
 
+	t.Run("successful load - ys6_jp_1.3.1.0", func(t *testing.T) {
+		cfg, err := config.LoadVersionConfigByName("ys6_jp_1.3.1.0")
+		if err != nil {
+			t.Fatalf("LoadVersionConfigByName failed: %v", err)
+		}
+
+		// Verify metadata
+		if cfg.Metadata.Name != "ys6_jp_1.3.1.0" {
+			t.Errorf("Expected name 'ys6_jp_1.3.1.0', got '%s'", cfg.Metadata.Name)
+		}
+		if cfg.Metadata.ProcessName != "YS6_WIN.exe" {
+			t.Errorf("Expected process_name 'YS6_WIN.exe', got '%s'", cfg.Metadata.ProcessName)
+		}
+		if cfg.Metadata.Game != "ys6" {
+			t.Errorf("Expected game 'ys6', got '%s'", cfg.Metadata.Game)
+		}
+
+		// Check an address that uses BaseAdd (加算ベースポインタ) resolution
+		addr, ok := cfg.Addresses["room_id"]
+		if !ok {
+			t.Fatalf("Expected 'room_id' address to exist")
+		}
+		if addr.BaseAdd == nil {
+			t.Errorf("Expected 'room_id' to have a non-nil BaseAdd")
+		}
+	})
+
 	t.Run("non-existent version", func(t *testing.T) {
 		_, err := config.LoadVersionConfigByName("non_existent")
 		if err == nil {
@@ -69,13 +98,14 @@ func TestLoadVersionConfigByName(t *testing.T) {
 func TestGetAvailableVersions(t *testing.T) {
 	versions := config.GetAvailableVersions()
 
-	if len(versions) != 2 {
-		t.Errorf("Expected 2 versions, got %d", len(versions))
+	if len(versions) != 3 {
+		t.Errorf("Expected 3 versions, got %d", len(versions))
 	}
 
 	// Check that expected versions exist
 	hasJP103 := false
 	hasJP104 := false
+	hasYS6 := false
 
 	for _, v := range versions {
 		if v == "jp_1.1.0.3" {
@@ -84,6 +114,9 @@ func TestGetAvailableVersions(t *testing.T) {
 		if v == "jp_1.0.0.4" {
 			hasJP104 = true
 		}
+		if v == "ys6_jp_1.3.1.0" {
+			hasYS6 = true
+		}
 	}
 
 	if !hasJP103 {
@@ -91,6 +124,20 @@ func TestGetAvailableVersions(t *testing.T) {
 	}
 	if !hasJP104 {
 		t.Errorf("Expected version 'jp_1.0.0.4' to be available")
+	}
+	if !hasYS6 {
+		t.Errorf("Expected version 'ys6_jp_1.3.1.0' to be available")
+	}
+}
+
+func TestGetAvailableVersions_順序が実行のたびに変わらず昇順であること(t *testing.T) {
+	want := []string{"jp_1.0.0.4", "jp_1.1.0.3", "ys6_jp_1.3.1.0"}
+
+	for i := 0; i < 5; i++ {
+		got := config.GetAvailableVersions()
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("GetAvailableVersions() mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 
