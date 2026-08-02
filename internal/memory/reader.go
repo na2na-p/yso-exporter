@@ -22,7 +22,11 @@ type MemoryReader interface {
 	
 	// ResolvePointerChain はポインタチェインを辿って最終的なアドレスを解決します
 	ResolvePointerChain(baseAddress uintptr, offsets []uintptr) (uintptr, error)
-	
+
 	// ParseAndResolveAddress はアドレス文字列を解析して実際のメモリアドレスを返します
 	ParseAndResolveAddress(address interface{}) (uintptr, error)
+
+	// ResolveSumBase は baseA、baseB それぞれのアドレスから32bit値を読み取り、
+	// 両者を加算した値を返します（2箇所のアドレスの合算で求まるポインタ表現の解決用）
+	ResolveSumBase(baseA, baseB uintptr) (uintptr, error)
 }

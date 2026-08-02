@@ -141,3 +141,18 @@ func (mr *MockMemoryReaderMockRecorder) ResolvePointerChain(baseAddress, offsets
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolvePointerChain", reflect.TypeOf((*MockMemoryReader)(nil).ResolvePointerChain), baseAddress, offsets)
 }
+
+// ResolveSumBase mocks base method.
+func (m *MockMemoryReader) ResolveSumBase(baseA, baseB uintptr) (uintptr, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveSumBase", baseA, baseB)
+	ret0, _ := ret[0].(uintptr)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolveSumBase indicates an expected call of ResolveSumBase.
+func (mr *MockMemoryReaderMockRecorder) ResolveSumBase(baseA, baseB any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveSumBase", reflect.TypeOf((*MockMemoryReader)(nil).ResolveSumBase), baseA, baseB)
+}

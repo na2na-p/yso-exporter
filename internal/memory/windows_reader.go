@@ -197,6 +197,26 @@ func (r *WindowsMemoryReader) readPointer(address uintptr) (uintptr, error) {
 	return value, nil
 }
 
+// ResolveSumBase は baseA、baseB それぞれのアドレスから32bit値を読み取り、
+// 両者を加算した値を返します。
+// 用途: LiveSplit ASL の `P = [A] + [B]` のように、2箇所の値の合算でしか
+// 求まらないポインタを、既存の「単一ベース + オフセットチェイン」形式では
+// 表現できないため、専用の解決手段として提供する。
+func (r *WindowsMemoryReader) ResolveSumBase(baseA, baseB uintptr) (uintptr, error) {
+	valueA, err := r.ReadInt32(baseA)
+	if err != nil {
+		return 0, fmt.Errorf("baseAの読み取りに失敗しました: %w", err)
+	}
+
+	valueB, err := r.ReadInt32(baseB)
+	if err != nil {
+		return 0, fmt.Errorf("baseBの読み取りに失敗しました: %w", err)
+	}
+
+	sum := uint32(valueA) + uint32(valueB)
+	return uintptr(sum), nil
+}
+
 // ParseAndResolveAddress はアドレスを解析して実際のメモリアドレスを返します
 // 注: この機能は本来WindowsMemoryReaderの責任外だが、
 // 既存のインターフェースとの互換性のために保持しています

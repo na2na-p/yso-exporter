@@ -251,6 +251,61 @@ func TestWindowsMemoryReader_ResolvePointerChain(t *testing.T) {
 	}
 }
 
+func TestWindowsMemoryReader_ResolveSumBase(t *testing.T) {
+	type args struct {
+		baseA uintptr
+		baseB uintptr
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    uintptr
+		wantErr bool
+	}{
+		{
+			name: "異常系: プロセス未オープン時にエラーが返る",
+			args: args{
+				baseA: 0x1000,
+				baseB: 0x2000,
+			},
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name: "異常系: baseAがゼロ時にエラーが返る",
+			args: args{
+				baseA: 0,
+				baseB: 0x2000,
+			},
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name: "異常系: baseBがゼロ時にエラーが返る",
+			args: args{
+				baseA: 0x1000,
+				baseB: 0,
+			},
+			want:    0,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			finder := process.NewWindowsProcessFinder()
+			reader := memory.NewWindowsMemoryReader(finder)
+			got, err := reader.ResolveSumBase(tt.args.baseA, tt.args.baseB)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("WindowsMemoryReader.ResolveSumBase() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("WindowsMemoryReader.ResolveSumBase() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 // テスト用の補助関数
 func createTestData() []byte {
 	var data int32 = 12345
