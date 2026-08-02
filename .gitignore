@@ -189,3 +189,6 @@ CLAUDE.md
 # Windows resource files
 *.syso
 *.syso.manifest
+
+# Local debug scripts
+/test_memory_read.go
