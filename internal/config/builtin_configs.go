@@ -284,9 +284,10 @@ var BuiltinVersionConfigs = map[string]*VersionConfig{
 		Addresses: map[string]AddressConfig{
 			"player_base": {
 				Base:        "YS6_WIN.exe+177A44",
+				BaseAdd:     "YS6_WIN.exe+177A48",
 				Offsets:     []uint32{},
 				Type:        "int32",
-				Description: "プレイヤー構造体ポインタ (0=未ロード)",
+				Description: "プレイヤー構造体ベース2ワード (合算0=未ロード)",
 			},
 			"room_id": {
 				Base:        "YS6_WIN.exe+177A44",
