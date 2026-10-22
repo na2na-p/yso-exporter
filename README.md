@@ -29,7 +29,7 @@ Ys Origin 用の Prometheus Metrics Exporter。
 - Windows 10/11
 - Ys Origin (日本語版)
 - Docker Desktop (オプション、Prometheus/Grafana用)
-- Go 1.21+ (ソースからビルドする場合)
+- Go 1.27+ (ソースからビルドする場合)
 
 ### インストール
 
